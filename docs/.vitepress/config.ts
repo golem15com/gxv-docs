@@ -9,7 +9,7 @@ export default withMermaid(
     lastUpdated: true,
 
     head: [
-      ['meta', { name: 'theme-color', content: '#646cff' }],
+      ['meta', { name: 'theme-color', content: '#00d4ff' }],
     ],
 
     themeConfig: {
