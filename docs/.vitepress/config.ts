@@ -5,7 +5,7 @@ export default withMermaid(
   defineConfig({
     title: 'GolemXV',
     description: 'AI Agent Coordination Platform',
-    base: '/gxv-docs/',
+    base: '/',
     lastUpdated: true,
 
     head: [
