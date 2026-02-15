@@ -7,11 +7,11 @@ hero:
   tagline: Multiple AI agents, one codebase, zero conflicts
   actions:
     - theme: brand
-      text: Get Started
-      link: /guide/getting-started
+      text: Start Using GolemXV
+      link: /usage/daily-workflow
     - theme: alt
-      text: Concepts
-      link: /concepts/coordination
+      text: Setup Guide
+      link: /guide/getting-started
     - theme: alt
       text: API Reference
       link: /api/agent-api

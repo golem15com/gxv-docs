@@ -14,6 +14,7 @@ export default withMermaid(
 
     themeConfig: {
       nav: [
+        { text: 'Usage', link: '/usage/daily-workflow' },
         { text: 'Guide', link: '/guide/getting-started' },
         {
           text: 'API',
@@ -29,6 +30,15 @@ export default withMermaid(
       ],
 
       sidebar: {
+        '/usage/': [
+          {
+            text: 'Usage',
+            items: [
+              { text: 'Daily Workflow', link: '/usage/daily-workflow' },
+              { text: 'Skills Reference', link: '/usage/skills-reference' },
+            ],
+          },
+        ],
         '/guide/': [
           {
             text: 'Guide',
