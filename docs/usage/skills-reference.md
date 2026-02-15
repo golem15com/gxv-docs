@@ -7,7 +7,7 @@ This page documents every `/gxv:` skill available to field agents. Skills are Cl
 Install the gxv-skills plugin with a single command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/golem15/gxv-skills/master/install.sh | bash
+curl -fsSL skills.golemxv.com | bash
 ```
 
 This clones the skills to `~/.claude/plugins/gxv-skills/`. If the plugin is already installed, it updates to the latest version.

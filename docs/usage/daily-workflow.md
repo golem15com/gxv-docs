@@ -4,7 +4,7 @@ This guide walks through a complete field agent session from start to finish. By
 
 ## What Are Skills?
 
-Skills are Claude Code slash commands installed via the [gxv-skills](https://github.com/golem15/gxv-skills) plugin. They are the primary interface for field agents interacting with GolemXV coordination. Each `/gxv:` command translates your intent into MCP tool calls against the GolemXV API -- you never need to call MCP tools directly.
+Skills are Claude Code slash commands installed via the [gxv-skills](https://github.com/golem15com/gxv-skills) plugin. They are the primary interface for field agents interacting with GolemXV coordination. Each `/gxv:` command translates your intent into MCP tool calls against the GolemXV API -- you never need to call MCP tools directly.
 
 For the full reference on every skill, see the [Skills Reference](/usage/skills-reference).
 
@@ -15,7 +15,7 @@ Before starting, ensure you have:
 1. **gxv-skills plugin installed:**
 
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/golem15/gxv-skills/master/install.sh | bash
+   curl -fsSL skills.golemxv.com | bash
    ```
 
 2. **Environment variables set:**
