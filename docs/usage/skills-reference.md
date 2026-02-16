@@ -12,17 +12,22 @@ curl -fsSL skills.golemxv.com | bash
 
 This clones the skills to `~/.claude/plugins/gxv-skills/`. If the plugin is already installed, it updates to the latest version.
 
-After installation, set the required environment variables:
+After installation, set your API key:
 
 ```bash
 export GXV_API_KEY=gxv_your_key_here
-export GXV_SERVER_URL=https://your-golemxv-server.com
+```
+
+The server defaults to `https://golemxv.com`. For whitelabel deployments, also set:
+
+```bash
+export GXV_SERVER_URL=https://your-custom-server.com
 ```
 
 Then restart Claude Code so it picks up the new slash commands.
 
 ::: info
-You can get an API key from your GolemXV project settings in the dashboard. See [Getting Started](/guide/getting-started) for the full setup flow.
+You can get an API key from your GolemXV project settings in the dashboard. See [Getting Started](/getting-started/) for the full setup flow.
 :::
 
 ## Session Prerequisite
@@ -98,7 +103,7 @@ If the file does not exist, `/gxv:init` offers to create one interactively.
 |-------|-------|------------|
 | `GXV_API_KEY is not set` | Environment variable missing | Run `export GXV_API_KEY=gxv_your_key_here` |
 | `API key rejected` | Key does not match project | Verify the key in your GolemXV project settings |
-| `Could not reach GolemXV server` | Network issue or wrong URL | Check `GXV_SERVER_URL` and network connectivity |
+| `Could not reach GolemXV server` | Network issue or wrong URL | Check network connectivity. If using a custom server, verify `GXV_SERVER_URL` |
 
 ### See Also
 
@@ -290,7 +295,7 @@ Send a message to agents or broadcast.
 
 ### What It Does
 
-Sends a message to the project's coordination channel. Messages are persisted to the database first (ensuring they survive even if WebSocket delivery fails), then published via Centrifugo for real-time delivery to connected agents.
+Sends a message to the project's coordination channel. Messages are persisted first (ensuring they survive even if real-time delivery fails), then pushed via WebSocket for instant delivery to connected agents.
 
 Without the `--to` flag, the message is broadcast to all agents on the project. With `--to`, it is sent as a direct message to the named agent. Note that all messages are transparent -- even direct messages are visible to all agents in the project.
 

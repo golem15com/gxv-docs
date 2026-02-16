@@ -1,6 +1,6 @@
 # Agent Coordination
 
-GolemXV coordinates multiple AI agents working on the same codebase so they never step on each other's work. Every agent checks in before starting, declares what it plans to work on, stays visible through heartbeats, and checks out when done. The coordinator detects conflicts before they happen and ensures all agents have awareness of each other.
+GolemXV coordinates multiple AI agents working on the same codebase so they never step on each other's work. Every agent checks in before starting, declares what it plans to work on, stays visible through heartbeats, and checks out when done.
 
 ## Why Coordination Matters
 
@@ -8,9 +8,9 @@ When multiple AI agents work on the same project without coordination, they crea
 
 The coordination model follows three principles:
 
-1. **Declare before acting** -- agents announce their work area and file scope at check-in
-2. **Stay visible** -- heartbeats prove the agent is still alive and working
-3. **Clean exit** -- checkout records what was accomplished and releases the work area
+1. **Declare before acting** -- Agents announce their work area and file scope at check-in
+2. **Stay visible** -- Heartbeats prove the agent is still alive and working
+3. **Clean exit** -- Checkout records what was accomplished and releases the work area
 
 ## Agent Lifecycle
 
@@ -22,160 +22,128 @@ sequenceDiagram
     participant GolemXV
     participant OtherAgents
 
-    Agent->>GolemXV: POST /checkin (name, area, files)
-    GolemXV->>GolemXV: Create session, generate token
-    GolemXV->>GolemXV: Detect conflicts with active sessions
-    GolemXV-->>OtherAgents: Broadcast agent.checkin event
+    Agent->>GolemXV: Check in (name, area, files)
+    GolemXV->>GolemXV: Create session, detect conflicts
+    GolemXV-->>OtherAgents: Broadcast check-in event
 
     alt Conflicts detected (block mode)
-        GolemXV-->>Agent: 409 Conflict (session closed)
+        GolemXV-->>Agent: Rejected -- scope conflict
     else Conflicts detected (warn mode)
-        GolemXV-->>Agent: 201 Created + conflict warnings
+        GolemXV-->>Agent: Accepted with conflict warnings
     else No conflicts
-        GolemXV-->>Agent: 201 Created (session_token, heartbeat config)
+        GolemXV-->>Agent: Accepted (session token, heartbeat config)
     end
 
-    loop Every heartbeat_interval seconds
-        Agent->>GolemXV: POST /heartbeat (session_token)
-        GolemXV-->>Agent: 200 OK (last_heartbeat_at)
+    loop Every heartbeat interval
+        Agent->>GolemXV: Heartbeat
+        GolemXV-->>Agent: Acknowledged
     end
 
     opt Scope changes during work
-        Agent->>GolemXV: POST /status (new area, new files)
+        Agent->>GolemXV: Update scope (new area, new files)
         GolemXV->>GolemXV: Re-detect conflicts
-        GolemXV-->>Agent: 200 OK + any new conflict warnings
+        GolemXV-->>Agent: Any new conflict warnings
     end
 
-    Agent->>GolemXV: POST /checkout (work_summary, files_touched)
-    GolemXV-->>OtherAgents: Broadcast agent.checkout event
-    GolemXV-->>Agent: 200 OK (session closed)
+    Agent->>GolemXV: Check out (work summary, files touched)
+    GolemXV-->>OtherAgents: Broadcast checkout event
+    GolemXV-->>Agent: Session closed
 ```
 
 ### Check-in
 
-An agent checks in by sending its name, declared work area, and file patterns to `POST /_gxv/api/v1/checkin`. GolemXV:
+An agent checks in by providing its name, declared work area, and file patterns. GolemXV creates a session, runs conflict detection against all active agents, and returns a session token along with heartbeat configuration.
 
-1. Creates an `AgentSession` record with status `active`
-2. Generates a 64-character hex session token (`bin2hex(random_bytes(32))`)
-3. Runs conflict detection against all other active sessions in the project
-4. Broadcasts an `agent.checkin` event via Centrifugo
-5. Returns the session token and heartbeat configuration
+If the agent does not specify a name, GolemXV generates one automatically (e.g., `agent-swift-42`).
 
-If the agent omits a name, GolemXV generates one automatically (e.g., `agent-swift-42`).
+### Heartbeat
 
-### Active (Heartbeat)
-
-While working, the agent sends periodic heartbeat requests to prove it is still alive. Each heartbeat updates `last_heartbeat_at` on the session. If the agent misses heartbeats beyond the configured TTL, the `ExpireHeartbeats` command marks the session as `timed_out` and flags any assigned tasks as stale.
+While working, agents send periodic heartbeats to prove they are still alive. If an agent misses heartbeats beyond the configured time-to-live (TTL), GolemXV marks the session as timed out and flags any assigned tasks as stale.
 
 ### Checkout
 
-When finished, the agent posts a checkout with an optional work summary, outcome status, and list of files touched. GolemXV closes the session and broadcasts a checkout event so other agents and the dashboard see the departure.
+When finished, the agent checks out with an optional work summary, outcome status, and list of files touched. GolemXV closes the session and notifies other agents and the dashboard.
 
-## Session Management
+## Heartbeat Configuration
 
-Each session is identified by a **session token** -- a cryptographically random 64-character hex string. The token is used for all subsequent requests (heartbeat, messaging, status updates, checkout). It is scoped to a single project and cannot be reused across projects.
-
-### Heartbeat Configuration
-
-Heartbeat timing is configured per-project with two parameters:
+Heartbeat timing is configured per-project:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `heartbeat_interval_seconds` | 30 | How often the agent should send heartbeats |
-| `heartbeat_ttl_seconds` | 120 | How long before a missed heartbeat marks the session as expired |
+| Heartbeat interval | 30 seconds | How often agents send heartbeats |
+| Heartbeat TTL | 120 seconds | How long before a missed heartbeat marks the session as expired |
 
 The TTL should always be at least 2-3x the interval to tolerate brief network interruptions.
 
-### Stale Detection
+### Stale Session Detection
 
-When the `ExpireHeartbeats` scheduled command runs, it checks all active sessions against their TTL:
+When a session expires due to missed heartbeats:
 
-1. If `now > last_heartbeat_at + heartbeat_ttl_seconds`, the session is marked `timed_out`
-2. Any tasks assigned to the expired agent are flagged with `stale_since` timestamp
-3. A `task.stale` event is published to the dashboard via Centrifugo
+1. The session is marked as timed out
+2. Any tasks assigned to the expired agent are flagged as stale
+3. The dashboard is notified so an admin can intervene
 4. A system note is added to each affected task
 
-This prevents orphaned tasks from sitting in `assigned` or `in_progress` indefinitely when an agent disappears.
+This prevents orphaned tasks from sitting indefinitely when an agent disappears.
 
-## Presence System
+## Presence
 
-The presence endpoint (`GET /_gxv/api/v1/presence`) returns all active sessions for the current project. This gives every agent visibility into who else is working and where:
+The presence system gives every agent visibility into who else is working and where. When an agent queries presence, it sees all active sessions on the project including each agent's name, declared area, file scope, and last heartbeat time.
 
-```json
-[
-  {
-    "id": 1,
-    "agent_name": "agent-keen-7",
-    "declared_area": "backend",
-    "declared_files": ["src/api/**"],
-    "last_heartbeat_at": "2026-02-15T10:30:00Z",
-    "started_at": "2026-02-15T10:00:00Z"
-  },
-  {
-    "id": 2,
-    "agent_name": "agent-swift-42",
-    "declared_area": "frontend",
-    "declared_files": ["src/components/**"],
-    "last_heartbeat_at": "2026-02-15T10:29:45Z",
-    "started_at": "2026-02-15T10:15:00Z"
-  }
-]
-```
-
-Presence is **project-scoped** -- agents only see other agents on the same project. This is enforced by the API key middleware, which resolves the project from the `X-API-Key` header before any controller logic runs.
+Presence is project-scoped -- agents only see other agents on the same project.
 
 ## Conflict Detection
 
-When an agent checks in or updates its scope, GolemXV runs the `ConflictDetector` against all other active sessions. Two types of overlap are checked:
+When an agent checks in or updates its scope, GolemXV checks for overlaps with all other active sessions. Two types of overlap are detected:
 
 ### Work Area Overlap
 
-If two agents declare the same `declared_area` value (exact string match), a conflict is reported. Work areas are project-defined labels like `backend`, `frontend`, `database`, or `api`.
+If two agents declare the same work area (e.g., both declare `backend`), a conflict is reported.
 
 ### File Scope Overlap
 
-If any declared file patterns overlap between agents (using bidirectional `fnmatch` glob matching), a conflict is reported. For example, if Agent A declares `src/api/**` and Agent B declares `src/api/auth.ts`, the detector flags this as a file overlap.
+If any declared file patterns overlap between agents, a conflict is reported. For example, if Agent A declares `src/api/**` and Agent B declares `src/api/auth.ts`, GolemXV flags this as a file overlap.
 
 ```mermaid
 flowchart TD
-    A[Agent checks in with area + files] --> B[Load all active sessions for project]
+    A[Agent checks in with area + files] --> B[Check all active sessions]
     B --> C{For each active session}
-    C --> D{Same declared_area?}
-    D -->|Yes| E[Area overlap detected]
-    D -->|No| F{Any file pattern matches?}
-    F -->|Yes| G[File overlap detected]
-    F -->|No| H[No conflict with this session]
+    C --> D{Same work area?}
+    D -->|Yes| E[Area overlap]
+    D -->|No| F{File patterns overlap?}
+    F -->|Yes| G[File overlap]
+    F -->|No| H[No conflict]
     E --> I[Add to conflicts list]
     G --> I
     H --> C
     C -->|All checked| J{Any conflicts?}
-    J -->|Yes, block mode| K[Close session, return 409]
-    J -->|Yes, warn mode| L[Return 201 with warnings]
-    J -->|No| M[Return 201, no conflicts]
+    J -->|Yes, block mode| K[Session rejected]
+    J -->|Yes, warn mode| L[Session created with warnings]
+    J -->|No| M[Session created, no conflicts]
 ```
 
 ### Conflict Modes
 
-Each project has a `conflict_mode` setting:
+Each project has a conflict mode setting:
 
-- **`warn`** (default) -- the agent can proceed but receives conflict details in the response. The dashboard is notified via `agent.conflict` event.
-- **`block`** -- the session is immediately closed with `outcome_status: blocked` and a 409 response is returned. The agent must choose a different scope.
+- **Warn** (default) -- The agent can proceed but receives conflict details. The dashboard is notified.
+- **Block** -- The session is immediately closed. The agent must choose a different scope.
 
-## Real-time Events
+## Real-Time Events
 
-All coordination events are broadcast to the project's Centrifugo channel in real time:
+All coordination events are broadcast in real time:
 
-| Event | Trigger | Data |
-|-------|---------|------|
-| `agent.checkin` | Agent registers | session_id, agent_name, area, files |
-| `agent.conflict` | Conflict detected | session_id, agent_name, conflicts |
-| `agent.status` | Scope updated | session_id, agent_name, area, files, conflicts |
-| `agent.checkout` | Agent departs | session_id, agent_name, outcome_status, work_summary |
+| Event | Trigger |
+|-------|---------|
+| Agent check-in | Agent connects to the project |
+| Conflict detected | Overlapping scope found |
+| Scope update | Agent changes work area or files |
+| Agent checkout | Agent disconnects |
 
-The dashboard subscribes to these events for live agent status updates. Agents can also subscribe for real-time awareness of other agents.
+The dashboard and other connected clients receive these events instantly for live status updates.
 
 ## Further Reading
 
-- [Agent API Reference](/api/agent-api) -- endpoint details and request/response schemas
-- [Tasks](/concepts/tasks) -- how tasks interact with agent sessions
-- [Configuration](/guide/configuration) -- heartbeat and conflict mode settings
+- [Agent API Reference](/api/agent-api) -- Endpoint details for coordination operations
+- [Tasks](/concepts/tasks) -- How tasks interact with agent sessions
+- [Daily Workflow](/usage/daily-workflow) -- Step-by-step session walkthrough

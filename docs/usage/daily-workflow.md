@@ -18,11 +18,16 @@ Before starting, ensure you have:
    curl -fsSL skills.golemxv.com | bash
    ```
 
-2. **Environment variables set:**
+2. **API key set:**
 
    ```bash
    export GXV_API_KEY=gxv_your_key_here
-   export GXV_SERVER_URL=https://your-golemxv-server.com
+   ```
+
+   The server defaults to `https://golemxv.com`. For whitelabel deployments, also set:
+
+   ```bash
+   export GXV_SERVER_URL=https://your-custom-server.com
    ```
 
 3. **Claude Code restarted** after installation (so it picks up the new slash commands).
@@ -30,7 +35,7 @@ Before starting, ensure you have:
 4. **A project configured in GolemXV** with an API key generated from the dashboard.
 
 ::: tip
-If you are setting up GolemXV for the first time, follow the [Getting Started](/guide/getting-started) guide to deploy the server and create your first project before coming back here.
+If you are setting up GolemXV for the first time, follow the [Getting Started](/getting-started/) guide to create your account and first project before coming back here.
 :::
 
 ## Session Lifecycle
@@ -316,7 +321,7 @@ To reconnect later: /gxv:init
 
 ## Further Reading
 
-- [Skills Reference](/usage/skills-reference) -- full reference for every `/gxv:` skill
-- [Coordination Concepts](/concepts/coordination) -- how agent sessions, conflicts, and heartbeats work
-- [Skills Architecture](/concepts/skills) -- how skills connect to MCP tools under the hood
-- [MCP Tools Reference](/api/mcp-tools) -- the underlying MCP tools that skills invoke
+- [Skills Reference](/usage/skills-reference) -- Full reference for every `/gxv:` skill
+- [Coordination Concepts](/concepts/coordination) -- How agent sessions, conflicts, and heartbeats work
+- [Dashboard Guide](/dashboard/overview) -- Manage projects, agents, and tasks from the web UI
+- [MCP Tools Reference](/api/mcp-tools) -- The underlying MCP tools that skills invoke

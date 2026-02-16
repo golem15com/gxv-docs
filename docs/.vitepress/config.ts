@@ -14,15 +14,16 @@ export default withMermaid(
 
     themeConfig: {
       nav: [
+        { text: 'Get Started', link: '/getting-started/' },
         { text: 'Usage', link: '/usage/daily-workflow' },
-        { text: 'Guide', link: '/guide/getting-started' },
+        { text: 'Dashboard', link: '/dashboard/overview' },
         {
           text: 'API',
           items: [
+            { text: 'Overview', link: '/api/overview' },
             { text: 'Agent API', link: '/api/agent-api' },
-            { text: 'Messaging API', link: '/api/messaging-api' },
             { text: 'Task API', link: '/api/task-api' },
-            { text: 'Dashboard API', link: '/api/dashboard-api' },
+            { text: 'Messaging API', link: '/api/messaging-api' },
             { text: 'MCP Tools', link: '/api/mcp-tools' },
           ],
         },
@@ -30,6 +31,18 @@ export default withMermaid(
       ],
 
       sidebar: {
+        '/getting-started/': [
+          {
+            text: 'Getting Started',
+            items: [
+              { text: 'Overview', link: '/getting-started/' },
+              { text: 'Create Account', link: '/getting-started/create-account' },
+              { text: 'Add Server', link: '/getting-started/add-server' },
+              { text: 'Create Project', link: '/getting-started/create-project' },
+              { text: 'Connect First Agent', link: '/getting-started/connect-first-agent' },
+            ],
+          },
+        ],
         '/usage/': [
           {
             text: 'Usage',
@@ -39,14 +52,15 @@ export default withMermaid(
             ],
           },
         ],
-        '/guide/': [
+        '/dashboard/': [
           {
-            text: 'Guide',
+            text: 'Dashboard',
             items: [
-              { text: 'Getting Started', link: '/guide/getting-started' },
-              { text: 'Architecture', link: '/guide/architecture' },
-              { text: 'Configuration', link: '/guide/configuration' },
-              { text: 'Deployment', link: '/guide/deployment' },
+              { text: 'Overview', link: '/dashboard/overview' },
+              { text: 'Servers', link: '/dashboard/servers' },
+              { text: 'Spawning Agents', link: '/dashboard/spawning-agents' },
+              { text: 'Tasks', link: '/dashboard/tasks' },
+              { text: 'Monitoring', link: '/dashboard/monitoring' },
             ],
           },
         ],
@@ -54,10 +68,10 @@ export default withMermaid(
           {
             text: 'API Reference',
             items: [
+              { text: 'Overview', link: '/api/overview' },
               { text: 'Agent API', link: '/api/agent-api' },
-              { text: 'Messaging API', link: '/api/messaging-api' },
               { text: 'Task API', link: '/api/task-api' },
-              { text: 'Dashboard API', link: '/api/dashboard-api' },
+              { text: 'Messaging API', link: '/api/messaging-api' },
               { text: 'MCP Tools', link: '/api/mcp-tools' },
             ],
           },
@@ -69,16 +83,15 @@ export default withMermaid(
               { text: 'Coordination', link: '/concepts/coordination' },
               { text: 'Tasks', link: '/concepts/tasks' },
               { text: 'Messaging', link: '/concepts/messaging' },
-              { text: 'Skills', link: '/concepts/skills' },
             ],
           },
         ],
-        '/operations/': [
+        '/help/': [
           {
-            text: 'Operations',
+            text: 'Help',
             items: [
-              { text: 'Security', link: '/operations/security' },
-              { text: 'Troubleshooting', link: '/operations/troubleshooting' },
+              { text: 'Troubleshooting', link: '/help/troubleshooting' },
+              { text: 'FAQ', link: '/help/faq' },
             ],
           },
         ],

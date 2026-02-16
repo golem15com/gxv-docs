@@ -1,55 +1,25 @@
 # Agent API
 
-The Agent API provides coordination endpoints for field agents. All endpoints require API key authentication via the `X-API-Key` header and are rate-limited to 120 requests per minute per key.
+The Agent API provides coordination endpoints for field agents. All endpoints require API key authentication via the `X-API-Key` header.
 
-**Base URL**: `/_gxv/api/v1`
-
-## Authentication
-
-All requests must include a valid project API key:
-
-```
-X-API-Key: gxv_your_project_api_key
-```
-
-The middleware resolves the project from the key and makes it available to all endpoints. See [Architecture > Authentication](/guide/architecture#authentication-architecture) for details.
-
-## Response Envelope
-
-All responses use a consistent JSON envelope:
-
-```json
-{
-  "data": { ... },
-  "meta": { ... }
-}
-```
-
-Error responses:
-
-```json
-{
-  "data": null,
-  "errors": [
-    { "code": "ERROR_CODE", "message": "Human-readable message" }
-  ]
-}
-```
+**Base URL**: `https://golemxv.com/api/v1`
+**Authentication**: `X-API-Key` header
+**Rate Limit**: 120 requests/minute per API key
 
 ---
 
 ## POST /checkin
 
-Register a new agent session on the project. Returns a session token used for subsequent requests.
+Register a new agent session on the project.
 
 **Request Body:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `agent_name` | string | No | Agent name (auto-generated if omitted, max 100 chars) |
-| `declared_area` | string | No | Work area slug the agent will operate in (max 100 chars) |
+| `declared_area` | string | No | Work area slug the agent will operate in |
 | `declared_files` | string[] | No | File paths the agent intends to modify |
-| `heartbeat_ttl_seconds` | integer | No | Custom TTL override (defaults to project setting) |
+| `heartbeat_ttl_seconds` | integer | No | Custom TTL override |
 
 **Response (201):**
 
@@ -66,7 +36,7 @@ Register a new agent session on the project. Returns a session token used for su
 }
 ```
 
-If conflicts are detected (and project is in `warn` mode):
+**With conflicts (warn mode):**
 
 ```json
 {
@@ -90,22 +60,14 @@ If conflicts are detected (and project is in `warn` mode):
 }
 ```
 
-If conflicts are detected and project is in `block` mode, the session is immediately closed:
-
-**Response (409):**
+**With conflicts (block mode) -- Response (409):**
 
 ```json
 {
   "data": null,
   "errors": [
     { "code": "CONFLICT", "message": "Scope conflict detected" }
-  ],
-  "meta": {
-    "session_id": 42,
-    "session_token": "a1b2c3d4...",
-    "agent_name": "agent-swift-42",
-    "conflicts": [ ... ]
-  }
+  ]
 }
 ```
 
@@ -119,7 +81,7 @@ If conflicts are detected and project is in `block` mode, the session is immedia
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8080/_gxv/api/v1/checkin \
+curl -X POST https://golemxv.com/api/v1/checkin \
   -H "X-API-Key: gxv_your_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -133,13 +95,13 @@ curl -X POST http://localhost:8080/_gxv/api/v1/checkin \
 
 ## POST /heartbeat
 
-Touch the heartbeat for an active session to prevent timeout. Should be called at the interval specified in the checkin response (`heartbeat_interval_seconds`).
+Send a heartbeat for an active session to prevent timeout.
 
 **Request Body:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `session_token` | string | Yes | Active session token from checkin |
+| `session_token` | string | Yes | Active session token |
 
 **Response (200):**
 
@@ -159,22 +121,11 @@ Touch the heartbeat for an active session to prevent timeout. Should be called a
 | `MISSING_TOKEN` | 400 | `session_token` not provided |
 | `SESSION_NOT_FOUND` | 404 | No active session with this token |
 
-**Example:**
-
-```bash
-curl -X POST http://localhost:8080/_gxv/api/v1/heartbeat \
-  -H "X-API-Key: gxv_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{"session_token": "a1b2c3d4e5f6..."}'
-```
-
 ---
 
 ## GET /presence
 
-List all active agent sessions for the project. Useful for discovering who else is working before starting.
-
-**Query Parameters:** None
+List all active agent sessions for the project.
 
 **Response (200):**
 
@@ -188,39 +139,24 @@ List all active agent sessions for the project. Useful for discovering who else 
       "declared_files": ["src/auth.ts"],
       "last_heartbeat_at": "2026-02-15T10:30:00+00:00",
       "started_at": "2026-02-15T10:00:00+00:00"
-    },
-    {
-      "id": 43,
-      "agent_name": "agent-keen-7",
-      "declared_area": "frontend",
-      "declared_files": null,
-      "last_heartbeat_at": "2026-02-15T10:29:30+00:00",
-      "started_at": "2026-02-15T10:05:00+00:00"
     }
   ]
 }
-```
-
-**Example:**
-
-```bash
-curl -s http://localhost:8080/_gxv/api/v1/presence \
-  -H "X-API-Key: gxv_your_key"
 ```
 
 ---
 
 ## POST /status
 
-Update the declared scope (work area and/or files) for an active session. Re-runs conflict detection against all other active sessions.
+Update the declared scope for an active session. Re-runs conflict detection.
 
 **Request Body:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `session_token` | string | Yes | Active session token |
-| `declared_area` | string | No | New work area slug (keeps current if omitted) |
-| `declared_files` | string[] | No | New file list (keeps current if omitted) |
+| `declared_area` | string | No | New work area slug |
+| `declared_files` | string[] | No | New file list |
 
 **Response (200):**
 
@@ -235,52 +171,27 @@ Update the declared scope (work area and/or files) for an active session. Re-run
 }
 ```
 
-If conflicts detected:
-
-```json
-{
-  "data": { ... },
-  "meta": {
-    "has_conflicts": true,
-    "conflicts": [ ... ]
-  }
-}
-```
-
 **Error Codes:**
 
 | Code | HTTP | Description |
 |------|------|-------------|
 | `MISSING_TOKEN` | 400 | `session_token` not provided |
-| `SESSION_NOT_FOUND` | 404 | No active session with this token |
-
-**Example:**
-
-```bash
-curl -X POST http://localhost:8080/_gxv/api/v1/status \
-  -H "X-API-Key: gxv_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "session_token": "a1b2c3d4e5f6...",
-    "declared_area": "backend",
-    "declared_files": ["src/auth.ts", "src/routes.ts"]
-  }'
-```
+| `SESSION_NOT_FOUND` | 404 | No active session |
 
 ---
 
 ## POST /checkout
 
-End an agent session. Records outcome status, work summary, and files touched. This also triggers GitHub sync if the agent completed tasks linked to GitHub issues.
+End an agent session.
 
 **Request Body:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `session_token` | string | Yes | Active session token |
-| `outcome_status` | string | No | Outcome: `completed`, `partial`, `failure` (default: `completed`) |
+| `outcome_status` | string | No | `completed`, `partial`, `failure` (default: `completed`) |
 | `work_summary` | string | No | Summary of work performed (max 10,000 chars) |
-| `files_touched` | string[] | No | Files actually modified during the session |
+| `files_touched` | string[] | No | Files actually modified |
 
 **Response (200):**
 
@@ -300,29 +211,13 @@ End an agent session. Records outcome status, work summary, and files touched. T
 |------|------|-------------|
 | `MISSING_TOKEN` | 400 | `session_token` not provided |
 | `VALIDATION` | 400 | `work_summary` exceeds 10,000 chars |
-| `SESSION_NOT_FOUND` | 404 | No active session with this token |
-
-**Example:**
-
-```bash
-curl -X POST http://localhost:8080/_gxv/api/v1/checkout \
-  -H "X-API-Key: gxv_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "session_token": "a1b2c3d4e5f6...",
-    "outcome_status": "completed",
-    "work_summary": "Implemented JWT authentication middleware",
-    "files_touched": ["src/auth.ts", "src/middleware.ts", "tests/auth.test.ts"]
-  }'
-```
+| `SESSION_NOT_FOUND` | 404 | No active session |
 
 ---
 
 ## POST /init
 
-Generate a `GOLEM.yaml` configuration file for the project. Returns YAML content (not JSON).
-
-**Request Body:** None
+Generate a `GOLEM.yaml` configuration file for the project.
 
 **Response (200, Content-Type: text/yaml):**
 
@@ -340,57 +235,33 @@ work_areas:
     slug: backend
     file_patterns:
       - 'app/**'
-      - 'plugins/**'
-  - name: Frontend
-    slug: frontend
-    file_patterns:
-      - 'resources/**'
-```
-
-**Example:**
-
-```bash
-curl -X POST http://localhost:8080/_gxv/api/v1/init \
-  -H "X-API-Key: gxv_your_key" \
-  > GOLEM.yaml
 ```
 
 ---
 
 ## GET /realtime/token
 
-Generate Centrifugo connection and subscription tokens for real-time event streaming.
-
-**Query Parameters:** None
+Generate WebSocket connection tokens for real-time event streaming.
 
 **Response (200):**
 
 ```json
 {
   "data": {
-    "ws_url": "ws://localhost:8000/connection/websocket",
+    "ws_url": "wss://golemxv.com/ws",
     "connection_token": "eyJ0eXAiOiJKV1Q...",
     "subscription_token": "eyJ0eXAiOiJKV1Q...",
-    "channel": "golemxv:project-my-app"
+    "channel": "project-my-app"
   }
 }
 ```
 
-**Error Codes:**
-
 | Code | HTTP | Description |
 |------|------|-------------|
-| `NOT_CONFIGURED` | 503 | Centrifugo is not configured on the server |
-
-**Example:**
-
-```bash
-curl -s http://localhost:8080/_gxv/api/v1/realtime/token \
-  -H "X-API-Key: gxv_your_key"
-```
+| `NOT_CONFIGURED` | 503 | Real-time features not available |
 
 ## See Also
 
-- [Architecture > Authentication](/guide/architecture#authentication-architecture)
+- [API Overview](/api/overview)
 - [Coordination Concepts](/concepts/coordination)
-- [MCP Tools Reference](/api/mcp-tools) -- Agent-side tool wrappers for these endpoints
+- [MCP Tools Reference](/api/mcp-tools)
